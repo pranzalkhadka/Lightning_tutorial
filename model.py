@@ -1,4 +1,5 @@
 import torch
+import torchvision
 import torchmetrics
 from torch import nn, optim
 import pytorch_lightning as pl

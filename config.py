@@ -14,5 +14,5 @@ data_dir = 'dataset/'
 num_worker = 4
 
 accelerator = "cpu"
-precision = 16
+precision = 'bf16-mixed'
 devices = 1
