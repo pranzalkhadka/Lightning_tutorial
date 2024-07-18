@@ -5,7 +5,8 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 import torch
-import torchvision
+import torchmetrics
+from torchmetrics import Metric
 # print(torch.cuda.is_available())
 
 
@@ -20,11 +21,31 @@ import torchvision
 #         x = self.fc2(x)
 #         return x
 
+
+class MyAccuracy(Metric):
+    def __init__(self):
+        super().__init__()
+        self.add_state("correct", default=torch.tensor(0), dist_reduce_fx="sum")
+        self.add_state("total", default=torch.tensor(0), dist_reduce_fx="sum")
+        
+    def update(self, preds, target):
+        preds = torch.argmax(preds, dim=1)
+        assert preds.shape == target.shape
+        self.correct += torch.sum(preds == target)
+        self.total += target.numel()
+        
+    def compute(self):
+        return self.correct.float() / self.total.float()
+
+
 class NN(pl.LightningModule):
     def __init__(self, input_size, num_classes):
         super().__init__()
         self.fc1 = nn.Linear(input_size, 50)
         self.fc2 = nn.Linear(50, num_classes)
+        self.accuracy = torchmetrics.Accuracy(task = 'multiclass', num_classes = num_classes)
+        self.my_accuracy = MyAccuracy()
+        self.f1_score = torchmetrics.F1Score(task = 'multiclass', num_classes = num_classes)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -36,8 +57,12 @@ class NN(pl.LightningModule):
         x = x.reshape(x.size(0), -1)
         scores = self.forward(x)
         loss = F.cross_entropy(scores, y)
-        self.log('train_loss', loss)
-        return loss
+        accuracy = self.my_accuracy(scores, y)
+        f1_score = self.f1_score(scores, y)
+        self.log_dict({'train_loss': loss, 'train_accuracy': accuracy, 'train_f1_score': f1_score},
+                      on_step=False, on_epoch=True, prog_bar=True)
+        return {'loss': loss, 'accuracy': accuracy, 'f1_score': f1_score}
+    
     
     def validation_step(self, batch, batch_idx):
         x, y = batch
