@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 from model import NN
 from dataset import MnistDataModule
 import config
+from callback import MyCallback, EarlyStopping
 
 
 if __name__ == "__main__":
@@ -13,10 +14,11 @@ if __name__ == "__main__":
                         devices= config.devices, 
                         min_epochs= config.min_epochs, 
                         max_epochs= config.max_epochs, 
-                        precision= config.precision)
+                        precision= config.precision,
+                        callbacks = [MyCallback(), EarlyStopping(monitor='val_loss')])
     
     trainer.fit(model, data_module)
 
     trainer.validate(model, data_module)
-    
+
     trainer.test(model, data_module)
