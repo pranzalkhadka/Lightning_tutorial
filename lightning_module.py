@@ -5,19 +5,20 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 import torch
+import torchvision
 # print(torch.cuda.is_available())
 
 
-class NN(nn.Module):
-    def __init__(self, input_size, num_classes):
-        super().__init__()
-        self.fc1 = nn.Linear(input_size, 50)
-        self.fc2 = nn.Linear(50, num_classes)
+# class NN(nn.Module):
+#     def __init__(self, input_size, num_classes):
+#         super().__init__()
+#         self.fc1 = nn.Linear(input_size, 50)
+#         self.fc2 = nn.Linear(50, num_classes)
 
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
+#     def forward(self, x):
+#         x = F.relu(self.fc1(x))
+#         x = self.fc2(x)
+#         return x
 
 class NN(pl.LightningModule):
     def __init__(self, input_size, num_classes):
@@ -86,6 +87,12 @@ model = NN(input_size=imput_size, num_classes=num_classes).to(device)
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+trainer = pl.Trainer(accelerator='cpu', devices=1, min_epochs = 1 ,max_epochs=num_epochs, precision=16)
+trainer.fit(model, train_loader, val_loader)
+
+trainer.validate(model, val_loader)
+trainer.test(model, test_loader)
 
 for epoch in range(num_epochs):
     for batch_idx, (data, targets) in enumerate(train_loader):
